@@ -1,6 +1,7 @@
 const express = require('express'); // express 임포트
 const app = express(); // app생성
 const port = 3000;
+const cookieParser = require('cookie-parser')
 
 const { User } = require('./models/User');
 
@@ -10,6 +11,7 @@ const bodyParser = require("body-parser"); //body-parser 사용
 
 app.use(bodyParser.urlencoded({ extended: true })); //application/x-www-form-urlencoded 로 된 데이터를 분석해서 가져올 수 있게 한다
 app.use(bodyParser.json()); //application/json 타입으로 된 데이터를 분석해서 가져올 수 있게 한다 -> json형식으로 파싱
+app.use(cookieParser())
 
 app.get('/', function (req, res) {
   res.send('hello world!!');
@@ -25,6 +27,35 @@ app.post("/register", (req, res) => {
         return res.status(200).json({
             success: true,
             userInfo,
+        })
+    })
+})
+
+app.post('/login',(req,res) =>{
+    // 요청된 이메일을 DB에 있는지 확인
+    User.findOne({email: req.body.email }, (err, user) => {
+        if (!user) {
+            return res.json({
+                loginSuccess: false,
+                message: "제공된 이메일에 해당하는 유저가 없습니다."
+            })
+        }
+
+        //요청된 이메일이 DB에 있다면 비밀번호가 맞는 비밀번호인지 확인
+
+        user.comparePassword(req.body.password, (err, isMatch) => {
+            if (!isMatch)
+                return res.json({ loginSuccess: false, message: "비밀번호가 틀렸습니다."})
+
+            //비밀번호까지 맞다면 토큰 생성
+            user.generateToken((err, user) => {
+                if (err) return res.status(400).send(err);
+
+                //토큰을 쿠키, 로컬스토리지에 저장
+                res.cookie("x_auth", user.token)
+                    .status(200)
+                    .json({loginSuccess: true, userId: user._id})
+            })
         })
     })
 })
