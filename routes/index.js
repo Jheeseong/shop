@@ -78,15 +78,26 @@ app.post('/api/users/login',(req,res) =>{
     })
 })
 
-app.get('/api/users/auth', auth , (res,req) => {
+app.get('/api/users/auth', auth , (req,res) => {
 
     // 여기까지 미들웨어를 통과했다는 것은 Authentication 이 true라는 말
     res.status(200).json({
         _id: req.user._id,
         isAdmin: req.user.role === 0 ? false: true,
-        isAuth: ture,
+        isAuth: true,
         email: req.user.email,
         name: req.user.name,
         role: req.user.role
     })
+})
+
+app.get('/api/users/logout', auth, (req, res) => {
+    User.findOneAndUpdate({ _id: req.user._id},
+        { token: ""}
+    , (err, user) => {
+        if (err) return res.json({ success: false, err});
+        return res.status(200).send({
+            success: true
+        })
+        })
 })
